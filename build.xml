@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="template" default="build" basedir=".">
+
+    <!-- ========================================================== -->
+    <!-- 定義 -->
+    <!-- ========================================================== -->
+
+    <!-- プロパティファイル読み込み -->
+    <property file="build.properties" />
+
+    <!-- ライブラリ参照 -->
+    <path id="build.class.path">
+        <pathelement location="${main.classes.dir}" />
+        <fileset dir="${lib.runtime.dir}" includes="**/*.jar" />
+        <fileset dir="${lib.develop.dir}" includes="**/*.jar" />
+    </path>
+
+    <!-- ========================================================== -->
+    <!-- 複数ターゲット実行 -->
+    <!-- ========================================================== -->
+    <target name="build" depends="clean,test,jar" />
+    <target name="all" depends="build,count,checkstyle,findbugs,coverage,javadoc" />
+
+    <!-- ========================================================== -->
+    <!-- 初期設定 -->
+    <!-- ========================================================== -->
+    <target name="init">
+        <mkdir dir="${build.dir}" />
+        <mkdir dir="${report.dir}" />
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- ソースコードのコンパイル -->
+    <!-- ========================================================== -->
+    <target name="compile" depends="init">
+        <mkdir dir="${main.classes.dir}" />
+        <javac destdir="${main.classes.dir}"
+               encoding="${javac.encoding}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}"
+               deprecation="${javac.deprecation}"
+               target="${javac.target}"
+               source="${javac.target}"
+               includeAntRuntime="false">
+            <compilerarg value="-Xlint:all,-unchecked" />
+            <src path="${main.src.dir}" />
+            <include name="**/*.java" />
+            <classpath refid="build.class.path" />
+        </javac>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- テストコードのコンパイル -->
+    <!-- ========================================================== -->
+    <target name="test-compile" depends="compile" if="test.src.dir">
+        <mkdir dir="${test.classes.dir}" />
+        <javac destdir="${test.classes.dir}"
+               encoding="${javac.encoding}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}"
+               deprecation="${javac.deprecation}"
+               target="${javac.target}"
+               source="${javac.target}"
+               includeAntRuntime="false">
+            <compilerarg value="-Xlint:all,-unchecked" />
+            <src path="${test.src.dir}" />
+            <include name="**/*.java" />
+            <classpath refid="build.class.path" />
+        </javac>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- jarファイルの作成 -->
+    <!-- ========================================================== -->
+    <target name="jar" depends="compile">
+        <mkdir dir="${build.dir}" />
+        <jar jarfile="${build.dir}/${product.fullname}.jar" basedir="${main.classes.dir}">
+            <manifest>
+                <attribute name="Implementation-Title" value="${product.basename}" />
+                <attribute name="Implementation-Version" value="${product.version}" />
+                <attribute name="Implementation-Vendor" value="${product.vendor}" />
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- ドキュメンテーション -->
+    <!-- ========================================================== -->
+    <target name="javadoc">
+        <mkdir dir="${javadoc.dir}" />
+        <javadoc destdir="${javadoc.dir}"
+                 encoding="${javac.encoding}"
+                 source="${javac.target}"
+                 windowtitle="${product.fullname}"
+                 docencoding="${javac.encoding}"
+                 charset="${javac.encoding}">
+            <doctitle>${product.fullname}</doctitle>
+            <classpath refid="build.class.path" />
+            <fileset dir="${main.src.dir}" />
+        </javadoc>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- JavaNCSSの実行 -->
+    <!-- ========================================================== -->
+    <target name="count" if="report.javancss.dir">
+        <taskdef name="javancss" classname="javancss.JavancssAntTask">
+            <classpath>
+                <fileset dir="${javancss.home.dir}/lib" includes="*.jar" />
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.javancss.dir}" />
+        <javancss srcdir="${main.src.dir}"
+            generateReport="true"
+            outputfile="${report.javancss.dir}/javancss_metrics.xml"
+            format="xml" />
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Checkstyleの実行 -->
+    <!-- ========================================================== -->
+    <target name="checkstyle" depends="compile" if="report.checkstyle.dir">
+        <taskdef resource="checkstyletask.properties">
+            <classpath>
+                <fileset dir="${checkstyle.home.dir}" includes="*.jar" />
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.checkstyle.dir}" />
+        <checkstyle config="${checkstyle.home.dir}/sun_checks.xml"
+                    failureProperty="checkstyle.failure"
+                    failOnViolation="false">
+            <formatter type="xml" tofile="${report.checkstyle.dir}/checkstyle-result.xml" />
+            <fileset dir="${main.src.dir}" includes="**/*.java" />
+        </checkstyle>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- FindBugsの実行 -->
+    <!-- ========================================================== -->
+    <target name="findbugs" depends="compile" if="report.findbugs.dir">
+        <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask">
+            <classpath>
+                <fileset dir="${findbugs.home.dir}" includes="**/*.jar" />
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.findbugs.dir}" />
+        <findbugs home="${findbugs.home.dir}"
+                  output="xml"
+                  outputfile="${report.findbugs.dir}/findbugs.xml">
+            <class location="${main.classes.dir}" />
+            <auxClasspath refid="build.class.path" />
+            <sourcePath path="${main.src.dir}" />
+        </findbugs>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- テスト実行 -->
+    <!-- ========================================================== -->
+    <target name="test" depends="test-compile" if="report.junit.dir">
+        <path id="cobertura.class.path">
+            <fileset dir="${cobertura.home.dir}">
+                <include name="cobertura.jar" />
+                <include name="**/*.jar" />
+            </fileset>
+        </path>
+        <taskdef classpathref="cobertura.class.path" resource="tasks.properties" />
+
+        <!-- カバレッジ計測ポイントの挿入 -->
+        <delete file="${cobertura.datafile}" />
+        <mkdir dir="${convert.classes.dir}" />
+        <cobertura-instrument datafile="${cobertura.datafile}" todir="${convert.classes.dir}">
+            <fileset dir="${main.classes.dir}">
+                <include name="**/*.class" />
+            </fileset>
+        </cobertura-instrument>
+
+        <!-- テスト実行 -->
+        <mkdir dir="${report.junit.dir}" />
+        <junit fork="yes" printsummary="yes" haltonfailure="no">
+            <sysproperty key="net.sourceforge.cobertura.datafile" file="${cobertura.datafile}" />
+            <classpath>
+                <pathelement location="${convert.classes.dir}" />
+                <pathelement location="${test.classes.dir}" />
+                <path refid="build.class.path" />
+                <path refid="cobertura.class.path" />
+            </classpath>
+            <formatter type="plain" />
+            <formatter type="xml" />
+            <batchtest fork="yes" todir="${report.junit.dir}">
+                <fileset dir="${test.src.dir}">
+                    <include name="**/*Test.java" />
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- カバレッジレポートの作成 -->
+    <!-- ========================================================== -->
+    <target name="coverage" depends="test" if="report.cobertura.dir">
+        <mkdir dir="${report.cobertura.dir}" />
+        <cobertura-report format="xml"
+                          datafile="${cobertura.datafile}"
+                          destdir="${report.cobertura.dir}">
+            <fileset dir="${main.src.dir}">
+                <include name="**/*.java" />
+            </fileset>
+        </cobertura-report>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- 成果物の消去 -->
+    <!-- ========================================================== -->
+    <target name="clean">
+        <delete dir="${build.dir}" />
+        <delete dir="${report.dir}" />
+    </target>
+
+</project>
+<!-- vim: set ts=4 sw=4 et: -->
