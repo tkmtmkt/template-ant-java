@@ -18,7 +18,7 @@ template-java-ant
 ### [Checkstyleの設定](http://checkstyle.sourceforge.net/)
 
     cd ~/apps/arch
-    wget http://downloads.sourceforge.net/project/checkstyle/checkstyle/5.6/checkstyle-5.6-bin.tar.gz
+    wget http://downloads.sourceforge.net/project/checkstyle/checkstyle/5.5/checkstyle-5.5-bin.tar.gz
 
     cd ~/apps
     tar zxvf arch/checkstyle-5.5-bin.tar.gz
