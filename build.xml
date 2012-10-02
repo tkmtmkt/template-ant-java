@@ -40,7 +40,7 @@
                optimize="${javac.optimize}"
                deprecation="${javac.deprecation}"
                target="${javac.target}"
-               source="${javac.target}"
+               source="${javac.source}"
                includeAntRuntime="false">
             <compilerarg value="-Xlint:all,-unchecked" />
             <src path="${main.src.dir}" />
@@ -60,7 +60,7 @@
                optimize="${javac.optimize}"
                deprecation="${javac.deprecation}"
                target="${javac.target}"
-               source="${javac.target}"
+               source="${javac.source}"
                includeAntRuntime="false">
             <compilerarg value="-Xlint:all,-unchecked" />
             <src path="${test.src.dir}" />
@@ -90,7 +90,7 @@
         <mkdir dir="${javadoc.dir}" />
         <javadoc destdir="${javadoc.dir}"
                  encoding="${javac.encoding}"
-                 source="${javac.target}"
+                 source="${javac.source}"
                  windowtitle="${product.fullname}"
                  docencoding="${javac.encoding}"
                  charset="${javac.encoding}">
