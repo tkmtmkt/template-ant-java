@@ -9,8 +9,8 @@
     <property file="build.properties" />
 
     <!-- ライブラリ参照 -->
-    <path id="build.class.path">
-        <pathelement location="${main.classes.dir}" />
+    <path id="build.classpath">
+        <pathelement location="${classes.main.dir}" />
         <fileset dir="${lib.runtime.dir}" includes="**/*.jar" />
         <fileset dir="${lib.develop.dir}" includes="**/*.jar" />
     </path>
@@ -33,8 +33,8 @@
     <!-- ソースコードのコンパイル -->
     <!-- ========================================================== -->
     <target name="compile" depends="init">
-        <mkdir dir="${main.classes.dir}" />
-        <javac destdir="${main.classes.dir}"
+        <mkdir dir="${classes.main.dir}" />
+        <javac destdir="${classes.main.dir}"
                encoding="${javac.encoding}"
                debug="${javac.debug}"
                optimize="${javac.optimize}"
@@ -43,18 +43,18 @@
                source="${javac.source}"
                includeAntRuntime="false">
             <compilerarg value="-Xlint:all,-unchecked" />
-            <src path="${main.src.dir}" />
+            <src path="${src.main.dir}" />
             <include name="**/*.java" />
-            <classpath refid="build.class.path" />
+            <classpath refid="build.classpath" />
         </javac>
     </target>
 
     <!-- ========================================================== -->
     <!-- テストコードのコンパイル -->
     <!-- ========================================================== -->
-    <target name="test-compile" depends="compile" if="test.src.dir">
-        <mkdir dir="${test.classes.dir}" />
-        <javac destdir="${test.classes.dir}"
+    <target name="test-compile" depends="compile" if="src.test.dir">
+        <mkdir dir="${classes.test.dir}" />
+        <javac destdir="${classes.test.dir}"
                encoding="${javac.encoding}"
                debug="${javac.debug}"
                optimize="${javac.optimize}"
@@ -63,9 +63,9 @@
                source="${javac.source}"
                includeAntRuntime="false">
             <compilerarg value="-Xlint:all,-unchecked" />
-            <src path="${test.src.dir}" />
+            <src path="${src.test.dir}" />
             <include name="**/*.java" />
-            <classpath refid="build.class.path" />
+            <classpath refid="build.classpath" />
         </javac>
     </target>
 
@@ -74,7 +74,7 @@
     <!-- ========================================================== -->
     <target name="jar" depends="compile">
         <mkdir dir="${build.dir}" />
-        <jar jarfile="${build.dir}/${product.fullname}.jar" basedir="${main.classes.dir}">
+        <jar jarfile="${build.dir}/${product.fullname}.jar" basedir="${classes.main.dir}">
             <manifest>
                 <attribute name="Implementation-Title" value="${product.basename}" />
                 <attribute name="Implementation-Version" value="${product.version}" />
@@ -95,8 +95,8 @@
                  docencoding="${javac.encoding}"
                  charset="${javac.encoding}">
             <doctitle>${product.fullname}</doctitle>
-            <classpath refid="build.class.path" />
-            <fileset dir="${main.src.dir}" />
+            <classpath refid="build.classpath" />
+            <fileset dir="${src.main.dir}" />
         </javadoc>
     </target>
 
@@ -111,7 +111,7 @@
         </taskdef>
 
         <mkdir dir="${report.javancss.dir}" />
-        <javancss srcdir="${main.src.dir}"
+        <javancss srcdir="${src.main.dir}"
             generateReport="true"
             outputfile="${report.javancss.dir}/javancss_metrics.xml"
             format="xml" />
@@ -132,7 +132,7 @@
                     failureProperty="checkstyle.failure"
                     failOnViolation="false">
             <formatter type="xml" tofile="${report.checkstyle.dir}/checkstyle-result.xml" />
-            <fileset dir="${main.src.dir}" includes="**/*.java" />
+            <fileset dir="${src.main.dir}" includes="**/*.java" />
         </checkstyle>
     </target>
 
@@ -150,9 +150,9 @@
         <findbugs home="${findbugs.home.dir}"
                   output="xml"
                   outputfile="${report.findbugs.dir}/findbugs.xml">
-            <class location="${main.classes.dir}" />
-            <auxClasspath refid="build.class.path" />
-            <sourcePath path="${main.src.dir}" />
+            <class location="${classes.main.dir}" />
+            <auxClasspath refid="build.classpath" />
+            <sourcePath path="${src.main.dir}" />
         </findbugs>
     </target>
 
@@ -160,19 +160,19 @@
     <!-- テスト実行 -->
     <!-- ========================================================== -->
     <target name="test" depends="test-compile" if="report.junit.dir">
-        <path id="cobertura.class.path">
+        <path id="cobertura.classpath">
             <fileset dir="${cobertura.home.dir}">
                 <include name="cobertura.jar" />
                 <include name="**/*.jar" />
             </fileset>
         </path>
-        <taskdef classpathref="cobertura.class.path" resource="tasks.properties" />
+        <taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
 
         <!-- カバレッジ計測ポイントの挿入 -->
         <delete file="${cobertura.datafile}" />
-        <mkdir dir="${convert.classes.dir}" />
-        <cobertura-instrument datafile="${cobertura.datafile}" todir="${convert.classes.dir}">
-            <fileset dir="${main.classes.dir}">
+        <mkdir dir="${classes.convert.dir}" />
+        <cobertura-instrument datafile="${cobertura.datafile}" todir="${classes.convert.dir}">
+            <fileset dir="${classes.main.dir}">
                 <include name="**/*.class" />
             </fileset>
         </cobertura-instrument>
@@ -182,15 +182,15 @@
         <junit fork="yes" printsummary="yes" haltonfailure="no">
             <sysproperty key="net.sourceforge.cobertura.datafile" file="${cobertura.datafile}" />
             <classpath>
-                <pathelement location="${convert.classes.dir}" />
-                <pathelement location="${test.classes.dir}" />
-                <path refid="build.class.path" />
-                <path refid="cobertura.class.path" />
+                <pathelement location="${classes.convert.dir}" />
+                <pathelement location="${classes.test.dir}" />
+                <path refid="build.classpath" />
+                <path refid="cobertura.classpath" />
             </classpath>
             <formatter type="plain" />
             <formatter type="xml" />
             <batchtest fork="yes" todir="${report.junit.dir}">
-                <fileset dir="${test.src.dir}">
+                <fileset dir="${src.test.dir}">
                     <include name="**/*Test.java" />
                 </fileset>
             </batchtest>
@@ -205,7 +205,7 @@
         <cobertura-report format="xml"
                           datafile="${cobertura.datafile}"
                           destdir="${report.cobertura.dir}">
-            <fileset dir="${main.src.dir}">
+            <fileset dir="${src.main.dir}">
                 <include name="**/*.java" />
             </fileset>
         </cobertura-report>
