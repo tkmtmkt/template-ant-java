@@ -6,6 +6,15 @@ template-java-ant
 
     mkdir -p ~/apps/arch
 
+### [scalaの設定](http://www.scala-lang.org/)
+
+    cd ~/apps/arch
+    wget http://www.scala-lang.org/downloads/distrib/files/scala-2.9.2.tgz
+
+    cd ~/apps
+    tar zxvf arch/scala-2.9.2.tgz
+    ln -sf scala-2.9.2 scala
+
 ### [JavaNCSSの設定](http://www.kclee.de/clemens/java/javancss/)
 
     cd ~/apps/arch
