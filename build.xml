@@ -10,7 +10,6 @@
 
     <!-- ライブラリ参照 -->
     <path id="build.classpath">
-        <pathelement location="${classes.main.dir}" />
         <fileset dir="${lib.runtime.dir}" includes="**/*.jar" />
         <fileset dir="${lib.develop.dir}" includes="**/*.jar" />
     </path>
@@ -18,8 +17,8 @@
     <!-- ========================================================== -->
     <!-- 複数ターゲット実行 -->
     <!-- ========================================================== -->
-    <target name="build" depends="clean,test,jar" />
-    <target name="all" depends="build,count,checkstyle,findbugs,coverage,javadoc" />
+    <target name="build" depends="test,jar" />
+    <target name="all" depends="clean,build,count,checkstyle,findbugs,coverage,javadoc" />
 
     <!-- ========================================================== -->
     <!-- 初期設定 -->
@@ -34,7 +33,9 @@
     <!-- ========================================================== -->
     <target name="compile" depends="init">
         <mkdir dir="${classes.main.dir}" />
-        <javac destdir="${classes.main.dir}"
+        <javac srcdir="${src.main.dir}"
+               destdir="${classes.main.dir}"
+               includes="**/*.java"
                encoding="${javac.encoding}"
                debug="${javac.debug}"
                optimize="${javac.optimize}"
@@ -43,9 +44,9 @@
                source="${javac.source}"
                includeAntRuntime="false">
             <compilerarg value="-Xlint:all,-unchecked" />
-            <src path="${src.main.dir}" />
-            <include name="**/*.java" />
-            <classpath refid="build.classpath" />
+            <classpath>
+                <path refid="build.classpath" />
+            </classpath>
         </javac>
     </target>
 
@@ -54,7 +55,9 @@
     <!-- ========================================================== -->
     <target name="test-compile" depends="compile" if="src.test.dir">
         <mkdir dir="${classes.test.dir}" />
-        <javac destdir="${classes.test.dir}"
+        <javac srcdir="${src.test.dir}"
+               destdir="${classes.test.dir}"
+               includes="**/*.java"
                encoding="${javac.encoding}"
                debug="${javac.debug}"
                optimize="${javac.optimize}"
@@ -63,9 +66,10 @@
                source="${javac.source}"
                includeAntRuntime="false">
             <compilerarg value="-Xlint:all,-unchecked" />
-            <src path="${src.test.dir}" />
-            <include name="**/*.java" />
-            <classpath refid="build.classpath" />
+            <classpath>
+                <pathelement location="${classes.main.dir}" />
+                <path refid="build.classpath" />
+            </classpath>
         </javac>
 
         <!-- scalaソースコードのコンパイル -->
@@ -73,13 +77,14 @@
             <fileset dir="${scala.home.dir}/lib" includes="*.jar" />
         </path>
         <taskdef classpathref="scala.classpath" resource="scala/tools/ant/antlib.xml" />
-        <scalac destdir="${classes.test.dir}"
+        <scalac srcdir="${src.test.dir}"
+                destdir="${classes.test.dir}"
+                includes="**/*.scala"
                 deprecation="${javac.deprecation}"
                 encoding="${javac.encoding}"
                 force="changed">
-            <src path="${src.test.dir}" />
-            <include name="**/*.scala" />
             <classpath>
+                <pathelement location="${classes.main.dir}" />
                 <path refid="build.classpath" />
                 <path refid="scala.classpath" />
             </classpath>
@@ -129,9 +134,11 @@
 
         <mkdir dir="${report.javancss.dir}" />
         <javancss srcdir="${src.main.dir}"
-            generateReport="true"
-            outputfile="${report.javancss.dir}/javancss_metrics.xml"
-            format="xml" />
+                  includes="**/*.java"
+                  abortOnFail="false"
+                  generateReport="true"
+                  outputfile="${report.javancss.dir}/javancss_metrics.xml"
+                  format="xml" />
     </target>
 
     <!-- ========================================================== -->
@@ -200,12 +207,12 @@
             <sysproperty key="net.sourceforge.cobertura.datafile" file="${cobertura.datafile}" />
             <classpath>
                 <pathelement location="${classes.convert.dir}" />
+                <pathelement location="${classes.main.dir}" />
                 <pathelement location="${classes.test.dir}" />
                 <path refid="build.classpath" />
                 <path refid="scala.classpath" />
                 <path refid="cobertura.classpath" />
             </classpath>
-            <formatter type="plain" />
             <formatter type="xml" />
             <batchtest fork="yes" todir="${report.junit.dir}">
                 <fileset dir="${classes.test.dir}">
@@ -229,7 +236,8 @@
         <mkdir dir="${report.cobertura.dir}" />
         <cobertura-report format="xml"
                           datafile="${cobertura.datafile}"
-                          destdir="${report.cobertura.dir}">
+                          destdir="${report.cobertura.dir}"
+                          encoding="${javac.encoding}">
             <fileset dir="${src.main.dir}">
                 <include name="**/*.java" />
             </fileset>
