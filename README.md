@@ -1,4 +1,4 @@
-template-java-ant
+template-ant-java
 =================
 
 環境設定
