@@ -25,7 +25,6 @@
     <!-- ========================================================== -->
     <target name="init">
         <mkdir dir="${build.dir}" />
-        <mkdir dir="${report.dir}" />
     </target>
 
     <!-- ========================================================== -->
@@ -71,24 +70,6 @@
                 <path refid="build.classpath" />
             </classpath>
         </javac>
-
-        <!-- scalaソースコードのコンパイル -->
-        <path id="scala.classpath">
-            <fileset dir="${scala.home.dir}/lib" includes="*.jar" />
-        </path>
-        <taskdef classpathref="scala.classpath" resource="scala/tools/ant/antlib.xml" />
-        <scalac srcdir="${src.test.dir}"
-                destdir="${classes.test.dir}"
-                includes="**/*.scala"
-                deprecation="${javac.deprecation}"
-                encoding="${javac.encoding}"
-                force="changed">
-            <classpath>
-                <pathelement location="${classes.main.dir}" />
-                <path refid="build.classpath" />
-                <path refid="scala.classpath" />
-            </classpath>
-        </scalac>
     </target>
 
     <!-- ========================================================== -->
@@ -210,19 +191,16 @@
                 <pathelement location="${classes.main.dir}" />
                 <pathelement location="${classes.test.dir}" />
                 <path refid="build.classpath" />
-                <path refid="scala.classpath" />
                 <path refid="cobertura.classpath" />
             </classpath>
             <formatter type="xml" />
             <batchtest fork="yes" todir="${report.junit.dir}">
                 <fileset dir="${classes.test.dir}">
                     <include name="**/*Test.class" />
-                    <include name="**/*Spec.class" />
                 </fileset>
     <!--
                 <fileset dir="${src.test.dir}">
                     <include name="**/*Test.java" />
-                    <include name="**/*.scala" />
                 </fileset>
     -->
             </batchtest>
@@ -249,8 +227,6 @@
     <!-- ========================================================== -->
     <target name="clean">
         <delete dir="${build.dir}" />
-        <delete dir="${report.dir}" />
-        <delete dir="target" />
     </target>
 
 </project>
