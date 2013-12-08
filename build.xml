@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<project name="template" default="build" basedir=".">
+<project name="template" default="build" basedir="." xmlns:jacoco="antlib:org.jacoco.ant">
 
     <!-- ========================================================== -->
     <!-- 定義 -->
@@ -18,7 +18,7 @@
     <!-- 複数ターゲット実行 -->
     <!-- ========================================================== -->
     <target name="build" depends="test,jar" />
-    <target name="all" depends="clean,build,count,checkstyle,findbugs,coverage,javadoc" />
+    <target name="all" depends="clean,build,count,checkstyle,findbugs,cover,javadoc" />
 
     <!-- ========================================================== -->
     <!-- 初期設定 -->
@@ -165,61 +165,55 @@
     <!-- テスト実行 -->
     <!-- ========================================================== -->
     <target name="test" depends="test-compile" if="report.junit.dir">
-        <path id="cobertura.classpath">
-            <fileset dir="${cobertura.home.dir}">
-                <include name="cobertura.jar" />
-                <include name="**/*.jar" />
-            </fileset>
-        </path>
-        <taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
+        <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml">
+            <classpath path="${jacoco.home.dir}/lib/jacocoant.jar"/>
+        </taskdef>
 
-        <!-- カバレッジ計測ポイントの挿入 -->
-        <delete file="${cobertura.datafile}" />
-        <mkdir dir="${classes.convert.dir}" />
-        <cobertura-instrument datafile="${cobertura.datafile}" todir="${classes.convert.dir}">
-            <fileset dir="${classes.main.dir}">
-                <include name="**/*.class" />
-            </fileset>
-        </cobertura-instrument>
-
-        <!-- テスト実行 -->
         <mkdir dir="${report.junit.dir}" />
-        <junit fork="yes" printsummary="yes" haltonfailure="no">
-            <sysproperty key="net.sourceforge.cobertura.datafile" file="${cobertura.datafile}" />
-            <classpath>
-                <pathelement location="${classes.convert.dir}" />
-                <pathelement location="${classes.main.dir}" />
-                <pathelement location="${classes.test.dir}" />
-                <path refid="build.classpath" />
-                <path refid="cobertura.classpath" />
-            </classpath>
-            <formatter type="xml" />
-            <batchtest fork="yes" todir="${report.junit.dir}">
-                <fileset dir="${classes.test.dir}">
-                    <include name="**/*Test.class" />
-                </fileset>
-    <!--
-                <fileset dir="${src.test.dir}">
-                    <include name="**/*Test.java" />
-                </fileset>
-    -->
-            </batchtest>
-        </junit>
+        <jacoco:coverage destfile="${jacoco.exec.file}">
+            <junit fork="yes" printsummary="yes" haltonfailure="no">
+                <classpath>
+                    <pathelement location="${classes.main.dir}" />
+                    <pathelement location="${classes.test.dir}" />
+                    <path refid="build.classpath" />
+                </classpath>
+                <formatter type="xml" />
+                <batchtest fork="yes" todir="${report.junit.dir}">
+                    <fileset dir="${classes.test.dir}">
+                        <include name="**/*Test.class" />
+                    </fileset>
+        <!--
+                    <fileset dir="${src.test.dir}">
+                        <include name="**/*Test.java" />
+                    </fileset>
+        -->
+                </batchtest>
+            </junit>
+        </jacoco:coverage>
     </target>
 
     <!-- ========================================================== -->
     <!-- カバレッジレポートの作成 -->
     <!-- ========================================================== -->
-    <target name="coverage" depends="test" if="report.cobertura.dir">
-        <mkdir dir="${report.cobertura.dir}" />
-        <cobertura-report format="xml"
-                          datafile="${cobertura.datafile}"
-                          destdir="${report.cobertura.dir}"
-                          encoding="${javac.encoding}">
-            <fileset dir="${src.main.dir}">
-                <include name="**/*.java" />
-            </fileset>
-        </cobertura-report>
+    <target name="cover" depends="test" if="report.jacoco.dir">
+        <mkdir dir="${report.jacoco.dir}" />
+        <jacoco:report>
+            <executiondata>
+                <file file="${jacoco.exec.file}"/>
+            </executiondata>
+
+            <structure name="${product.fullname}">
+                <classfiles>
+                    <fileset dir="${classes.main.dir}"/>
+                </classfiles>
+                <sourcefiles encoding="${javac.encoding}">
+                    <fileset dir="${src.main.dir}"/>
+                </sourcefiles>
+            </structure>
+
+            <html destdir="${report.jacoco.dir}/html"/>
+            <xml destfile="${report.jacoco.dir}/jacoco.xml"/>
+        </jacoco:report>
     </target>
 
     <!-- ========================================================== -->
