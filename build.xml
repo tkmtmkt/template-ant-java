@@ -18,7 +18,7 @@
     <!-- 複数ターゲット実行 -->
     <!-- ========================================================== -->
     <target name="build" depends="test,jar"/>
-    <target name="all" depends="clean,build,count,checkstyle,findbugs,cover,javadoc"/>
+    <target name="all" depends="clean,build,count,cpd,checkstyle,findbugs,cover,javadoc"/>
 
     <!-- ========================================================== -->
     <!-- 初期設定 -->
@@ -120,6 +120,28 @@
                   generateReport="true"
                   outputfile="${report.javancss.dir}/javancss_metrics.xml"
                   format="xml"/>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- CPDの実行 -->
+    <!-- ========================================================== -->
+    <target name="cpd" if="report.cpd.dir">
+        <taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask">
+            <classpath>
+                <fileset dir="${cpd.home.dir}/lib" includes="*.jar"/>
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.cpd.dir}"/>
+        <cpd encoding="${javac.encoding}"
+             language="java"
+             minimumTokenCount="100"
+             format="xml"
+             outputfile="${report.cpd.dir}/cpd.xml">
+            <fileset dir="${src.main.dir}">
+                <include name="**/*.java"/>
+            </fileset>
+        </cpd>
     </target>
 
     <!-- ========================================================== -->
