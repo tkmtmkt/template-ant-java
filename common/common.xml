@@ -6,7 +6,7 @@
     <!-- ========================================================== -->
 
     <!-- プロパティファイル読み込み -->
-    <property file="build.properties"/>
+    <property file="${common.dir}/common.properties"/>
 
     <!-- ライブラリ参照 -->
     <path id="build.classpath">
@@ -31,9 +31,9 @@
     <!-- ソースコードのコンパイル -->
     <!-- ========================================================== -->
     <target name="compile" depends="init">
-        <mkdir dir="${classes.main.dir}"/>
-        <javac srcdir="${src.main.dir}"
-               destdir="${classes.main.dir}"
+        <mkdir dir="${main.classes.dir}"/>
+        <javac srcdir="${main.src.dir}"
+               destdir="${main.classes.dir}"
                includes="**/*.java"
                encoding="${javac.encoding}"
                debug="${javac.debug}"
@@ -52,10 +52,10 @@
     <!-- ========================================================== -->
     <!-- テストコードのコンパイル -->
     <!-- ========================================================== -->
-    <target name="test-compile" depends="compile" if="src.test.dir">
-        <mkdir dir="${classes.test.dir}"/>
-        <javac srcdir="${src.test.dir}"
-               destdir="${classes.test.dir}"
+    <target name="test-compile" depends="compile" if="test.src.dir">
+        <mkdir dir="${test.classes.dir}"/>
+        <javac srcdir="${test.src.dir}"
+               destdir="${test.classes.dir}"
                includes="**/*.java"
                encoding="${javac.encoding}"
                debug="${javac.debug}"
@@ -66,7 +66,7 @@
                includeAntRuntime="false">
             <compilerarg value="-Xlint:all,-unchecked"/>
             <classpath>
-                <pathelement location="${classes.main.dir}"/>
+                <pathelement location="${main.classes.dir}"/>
                 <path refid="build.classpath"/>
             </classpath>
         </javac>
@@ -77,7 +77,7 @@
     <!-- ========================================================== -->
     <target name="jar" depends="compile">
         <mkdir dir="${build.dir}"/>
-        <jar jarfile="${build.dir}/${product.fullname}.jar" basedir="${classes.main.dir}">
+        <jar jarfile="${build.dir}/${product.fullname}.jar" basedir="${main.classes.dir}">
             <manifest>
                 <attribute name="Implementation-Title" value="${product.basename}"/>
                 <attribute name="Implementation-Version" value="${product.version}"/>
@@ -99,7 +99,7 @@
                  charset="${javac.encoding}">
             <doctitle>${product.fullname}</doctitle>
             <classpath refid="build.classpath"/>
-            <fileset dir="${src.main.dir}"/>
+            <fileset dir="${main.src.dir}"/>
         </javadoc>
     </target>
 
@@ -138,7 +138,7 @@
              minimumTokenCount="100"
              format="xml"
              outputfile="${report.cpd.dir}/cpd.xml">
-            <fileset dir="${src.main.dir}">
+            <fileset dir="${main.src.dir}">
                 <include name="**/*.java"/>
             </fileset>
         </cpd>
@@ -159,7 +159,7 @@
                     failureProperty="checkstyle.failure"
                     failOnViolation="false">
             <formatter type="xml" tofile="${report.checkstyle.dir}/checkstyle-result.xml"/>
-            <fileset dir="${src.main.dir}" includes="**/*.java"/>
+            <fileset dir="${main.src.dir}" includes="**/*.java"/>
         </checkstyle>
     </target>
 
@@ -177,9 +177,9 @@
         <findbugs home="${findbugs.home.dir}"
                   output="xml"
                   outputfile="${report.findbugs.dir}/findbugs.xml">
-            <class location="${classes.main.dir}"/>
+            <class location="${main.classes.dir}"/>
             <auxClasspath refid="build.classpath"/>
-            <sourcePath path="${src.main.dir}"/>
+            <sourcePath path="${main.src.dir}"/>
         </findbugs>
     </target>
 
@@ -195,13 +195,13 @@
         <jacoco:coverage destfile="${jacoco.exec.file}">
             <junit fork="yes" printsummary="yes" haltonfailure="no">
                 <classpath>
-                    <pathelement location="${classes.main.dir}"/>
-                    <pathelement location="${classes.test.dir}"/>
+                    <pathelement location="${main.classes.dir}"/>
+                    <pathelement location="${test.classes.dir}"/>
                     <path refid="build.classpath"/>
                 </classpath>
                 <formatter type="xml"/>
                 <batchtest fork="yes" todir="${report.junit.dir}">
-                    <fileset dir="${classes.test.dir}">
+                    <fileset dir="${test.classes.dir}">
                         <include name="**/*Test.class"/>
                     </fileset>
                 </batchtest>
@@ -221,10 +221,10 @@
 
             <structure name="${product.fullname}">
                 <classfiles>
-                    <fileset dir="${classes.main.dir}"/>
+                    <fileset dir="${main.classes.dir}"/>
                 </classfiles>
                 <sourcefiles encoding="${javac.encoding}">
-                    <fileset dir="${src.main.dir}"/>
+                    <fileset dir="${main.src.dir}"/>
                 </sourcefiles>
             </structure>
 
