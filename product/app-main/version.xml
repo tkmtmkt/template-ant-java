@@ -20,8 +20,8 @@
 
     <publications>
         <artifact name="app-main" type="jar" ext="jar" conf="master" />
-        <artifact name="app-main" type="jar" ext="jar" conf="sources" />
-        <artifact name="app-main" type="jar" ext="jar" conf="javadoc" />
+        <artifact name="app-main" type="src" ext="jar" conf="sources" />
+        <artifact name="app-main" type="doc" ext="jar" conf="javadoc" />
     </publications>
 
     <dependencies>

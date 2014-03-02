@@ -29,6 +29,37 @@
             </classpath>
         </taskdef>
         <ivy:info file="${ivy.file}" />
+        <property name="package.base" value="${target.dir}/${ivy.module}" />
+    </target>
+
+    <target name="ivy-new-version" depends="init-ivy" unless="ivy.new.revision">
+        <!-- default module version prefix value -->
+        <property name="module.version.prefix" value="${ivy.revision}-dev-b" />
+
+        <!-- asks Ivy for an available version number -->
+        <ivy:buildnumber organisation="${ivy.organisation}"
+                         module="${ivy.module}"
+                         revision="${module.version.prefix}"
+                         defaultBuildNumber="1"
+                         revSep=""/>
+    </target>
+
+    <target name="local-version" depends="init-ivy">
+        <tstamp>
+            <format property="now" pattern="yyyyMMddHHmmss"/>
+        </tstamp>
+        <property name="ivy.new.revision" value="${ivy.revision}-local-${now}"/>
+    </target>
+
+    <target name="version" depends="ivy-new-version">
+        <!--
+        create version file in classpath for later inclusion in jar 
+        -->
+        <mkdir dir="${main.classes.dir}"/>
+        <echo message="version=${ivy.new.revision}"
+              file="${main.classes.dir}/${ivy.module}.properties" append="false"/>
+        <!--  load generated version properties file  -->
+        <property file="${main.classes.dir}/${ivy.module}.properties"/>
     </target>
 
     <!-- ========================================================== -->
@@ -109,7 +140,7 @@
                target="${javac.target}"
                source="${javac.source}"
                includeAntRuntime="false">
-            <compilerarg value="-Xlint:all,-unchecked" />
+            <compilerarg value="-Xlint:all" />
             <classpath>
                 <path refid="main.classpath" />
             </classpath>
@@ -141,7 +172,7 @@
                target="${javac.target}"
                source="${javac.source}"
                includeAntRuntime="false">
-            <compilerarg value="-Xlint:all,-unchecked" />
+            <compilerarg value="-Xlint:all" />
             <classpath>
                 <pathelement location="${main.classes.dir}" />
                 <path refid="test.classpath" />
@@ -164,17 +195,31 @@
             </classpath>
             <formatter type="xml" />
             <batchtest fork="yes" todir="${report.junit.dir}">
-                <fileset dir="${test.classes.dir}">
-                    <include name="**/*Test.class" />
-                </fileset>
+                <fileset dir="${test.classes.dir}" includes="**/*Test.class" />
             </batchtest>
         </junit>
     </target>
 
     <!-- ========================================================== -->
+    <!-- jarファイルの作成 -->
+    <!-- ========================================================== -->
+    <target name="jar" depends="version, compile"
+        description="--> ">
+
+        <hostinfo prefix="host" />
+        <jar destfile="${target.dir}/${ivy.module}-${version}.jar">
+            <fileset dir="${main.classes.dir}" />
+            <manifest>
+                <attribute name="Built-By" value="${user.name}@${host.NAME}"/>
+                <attribute name="Version" value="${version}" />
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- ========================================================== -->
     <!-- ドキュメンテーション -->
     <!-- ========================================================== -->
-    <target name="javadoc"
+    <target name="javadoc" depends="version"
         description="--> ">
 
         <mkdir dir="${javadoc.dir}" />
@@ -191,34 +236,51 @@
     </target>
 
     <!-- ========================================================== -->
-    <!-- jarファイルの作成 -->
+    <!-- パッケージ作成 -->
     <!-- ========================================================== -->
-    <target name="jar" depends="compile"
+    <!-- パッケージ作成 -->
+    <target name="package-bin" depends="jar" if="has.main.src"
         description="--> ">
 
-        <mkdir dir="${target.dir}" />
-        <jar jarfile="${target.dir}/${ivy.module}-${version}.jar" basedir="${main.classes.dir}">
+        <copy file="${package.base}-${version}.jar"
+            tofile="${package.base}-${version}-jar.jar" />
+    </target>
+
+    <!-- パッケージ作成 -->
+    <target name="package-src" depends="init, version" if="has.main.src"
+        description="--> ">
+
+        <hostinfo prefix="host" />
+        <jar destfile="${package.base}-${version}-src.jar">
+            <fileset dir="${basedir}">
+                <include name="src/**" />
+                <include name="resources/**" />
+                <include name="test/src/**" />
+                <include name="test/resources/**" />
+            </fileset>
             <manifest>
-                <attribute name="Build-by" value="${product.basename}" />
-                <attribute name="Version" value="${product.version}" />
+                <attribute name="Built-By" value="${user.name}@${host.NAME}"/>
+                <attribute name="Version" value="${version}" />
             </manifest>
         </jar>
     </target>
 
-    <!-- ========================================================== -->
     <!-- パッケージ作成 -->
-    <!-- ========================================================== -->
-    <target name="package" depends="init-ivy"
+    <target name="package-doc" depends="javadoc" if="has.main.src"
         description="--> ">
 
+        <hostinfo prefix="host" />
+        <jar destfile="${package.base}-${version}-doc.jar">
+            <fileset dir="${javadoc.dir}" />
+            <manifest>
+                <attribute name="Built-By" value="${user.name}@${host.NAME}"/>
+                <attribute name="Version" value="${version}" />
+            </manifest>
+        </jar>
     </target>
 
-    <target name="package-src" depends="init-ivy"
-        description="--> ">
-
-    </target>
-
-    <target name="package-doc" depends="init-ivy"
+    <!-- パッケージ作成 -->
+    <target name="package" depends="package-bin, package-src, package-doc"
         description="--> ">
 
     </target>
@@ -226,14 +288,38 @@
     <!-- ========================================================== -->
     <!-- パッケージ配布 -->
     <!-- ========================================================== -->
-    <target name="publish" depends="package, package-src, package-doc"
+    <target name="publish" depends="clean, package"
         description="--> ">
 
+        <ivy:publish artifactspattern="${package.base}-${version}-[type].[ext]"
+            resolver="shared"
+            pubrevision="${version}"
+            conf="jar,src,doc"
+            status="release" />
         <echo>
 ======================================================================
 organisation : ${ivy.organisation}
 module       : ${ivy.module}
-revision     : ${ivy.revision}
+revision     : ${version}
+======================================================================
+        </echo>
+    </target>
+
+    <target name="publish-local" depends="local-version, package-bin"
+        description="--> ">
+
+        <ivy:publish artifactspattern="${package.base}-${version}-[type].[ext]"
+            resolver="local"
+            pubrevision="${version}"
+            pubdate="${now}"
+            forcedeliver="true"
+            conf="jar"
+            status="integration" />
+        <echo>
+======================================================================
+organisation : ${ivy.organisation}
+module       : ${ivy.module}
+revision     : ${version}
 ======================================================================
         </echo>
     </target>
@@ -289,9 +375,7 @@ revision     : ${ivy.revision}
              minimumTokenCount="100"
              format="xml"
              outputfile="${report.cpd.dir}/cpd.xml">
-            <fileset dir="${main.src.dir}">
-                <include name="**/*.java" />
-            </fileset>
+            <fileset dir="${main.src.dir}" includeds="**/*.java" />
         </cpd>
     </target>
 
@@ -376,9 +460,7 @@ revision     : ${ivy.revision}
                 </classpath>
                 <formatter type="xml" />
                 <batchtest fork="yes" todir="${report.junit.dir}">
-                    <fileset dir="${test.classes.dir}">
-                        <include name="**/*Test.class" />
-                    </fileset>
+                    <fileset dir="${test.classes.dir}" includes="**/*Test.class" />
                 </batchtest>
             </junit>
         </jacoco:coverage>
