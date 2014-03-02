@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="common" default="build" basedir="."
+    xmlns:ivy="antlib:org.apache.ivy.ant"
+    xmlns:jacoco="antlib:org.jacoco.ant">
+
+    <!-- ========================================================== -->
+    <!-- 定義 -->
+    <!-- ========================================================== -->
+
+    <!-- プロパティファイル読み込み -->
+    <property file="${common.dir}/tool.properties" />
+    <property file="${common.dir}/common.properties" />
+
+    <!-- 複数ターゲット設定 -->
+    <target name="build" depends="clean,test,jar" />
+    <target name="inspect" depends="count,cpd,checkstyle,findbugs,cover" />
+
+    <!-- ========================================================== -->
+    <!-- 初期設定 -->
+    <!-- ========================================================== -->
+    <target name="init">
+        <mkdir dir="${target.dir}" />
+    </target>
+
+    <target name="init-ivy">
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant">
+            <classpath>
+                <fileset dir="${lib.unmanaged.dir}" includes="ivy*.jar" />
+            </classpath>
+        </taskdef>
+        <ivy:info file="${ivy.file}" />
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- 依存モジュール確認 -->
+    <!-- ========================================================== -->
+    <target name="resolve" depends="init-ivy"
+        description="--> ">
+
+        <ivy:resolve file="${ivy.file}" conf="default,compile,test" />
+
+        <!-- ライブラリ参照（コンパイル用） -->
+        <ivy:cachepath pathid="main.classpath.tmp" conf="compile" />
+        <path id="main.classpath">
+            <fileset dir="${lib.unmanaged.dir}" includes="**/*.jar" />
+            <path refid="main.classpath.tmp" />
+        </path>
+
+        <!-- ライブラリ参照（テスト用） -->
+        <ivy:cachepath pathid="test.classpath.tmp" conf="test" />
+        <path id="test.classpath">
+            <fileset dir="${lib.unmanaged.dir}" includes="**/*.jar" />
+            <path refid="test.classpath.tmp" />
+        </path>
+    </target>
+
+    <target name="clean-cache" depends="init-ivy"
+        description="--> ">
+
+        <ivy:cleancache />
+    </target>
+
+    <target name="depends" depends="init, resolve"
+        description="--> ">
+
+        <ivy:report todir="${report.depends.dir}" />
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- 依存モジュール取得 -->
+    <!-- ========================================================== -->
+    <target name="retrieve" depends="init-ivy"
+        description="--> ">
+
+        <ivy:retrieve pattern="${lib.managed.dir}/[artifact]-[revision].[ext]" />
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- 依存モジュール消去 -->
+    <!-- ========================================================== -->
+    <target name="clean-lib"
+        description="--> ">
+
+        <delete dir="${lib.managed.dir}" />
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- ソースコードのコンパイル -->
+    <!-- ========================================================== -->
+    <available property="has.main.resources" file="${main.resources.dir}" type="dir" />
+    <target name="prepare-resources" depends="init" if="has.main.resources">
+        <copy todir="${main.classes.dir}">
+            <fileset dir="${main.resources.dir}" />
+        </copy>
+    </target>
+
+    <available property="has.main.src" file="${main.src.dir}" type="dir" />
+    <target name="compile" depends="init, resolve, prepare-resources" if="has.main.src"
+        description="--> ">
+
+        <mkdir dir="${main.classes.dir}" />
+        <javac srcdir="${main.src.dir}"
+               destdir="${main.classes.dir}"
+               includes="**/*.java"
+               encoding="${javac.encoding}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}"
+               deprecation="${javac.deprecation}"
+               target="${javac.target}"
+               source="${javac.source}"
+               includeAntRuntime="false">
+            <compilerarg value="-Xlint:all,-unchecked" />
+            <classpath>
+                <path refid="main.classpath" />
+            </classpath>
+        </javac>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- テストコードのコンパイル -->
+    <!-- ========================================================== -->
+    <available property="has.test.resources" file="${test.resources.dir}" type="dir" />
+    <target name="prepare-test-resources" depends="init" if="has.test.resources">
+        <copy todir="${test.classes.dir}">
+            <fileset dir="${test.resources.dir}" />
+        </copy>
+    </target>
+
+    <available property="has.test.src" file="${test.src.dir}" type="dir" />
+    <target name="test-compile" depends="compile, prepare-test-resources" if="has.test.src"
+        description="--> ">
+
+        <mkdir dir="${test.classes.dir}" />
+        <javac srcdir="${test.src.dir}"
+               destdir="${test.classes.dir}"
+               includes="**/*.java"
+               encoding="${javac.encoding}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}"
+               deprecation="${javac.deprecation}"
+               target="${javac.target}"
+               source="${javac.source}"
+               includeAntRuntime="false">
+            <compilerarg value="-Xlint:all,-unchecked" />
+            <classpath>
+                <pathelement location="${main.classes.dir}" />
+                <path refid="test.classpath" />
+            </classpath>
+        </javac>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- テスト実行 -->
+    <!-- ========================================================== -->
+    <target name="test" depends="test-compile" if="report.junit.dir"
+        description="--> ">
+
+        <mkdir dir="${report.junit.dir}" />
+        <junit fork="yes" printsummary="yes" haltonfailure="no">
+            <classpath>
+                <pathelement location="${main.classes.dir}" />
+                <pathelement location="${test.classes.dir}" />
+                <path refid="test.classpath" />
+            </classpath>
+            <formatter type="xml" />
+            <batchtest fork="yes" todir="${report.junit.dir}">
+                <fileset dir="${test.classes.dir}">
+                    <include name="**/*Test.class" />
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- ドキュメンテーション -->
+    <!-- ========================================================== -->
+    <target name="javadoc"
+        description="--> ">
+
+        <mkdir dir="${javadoc.dir}" />
+        <javadoc destdir="${javadoc.dir}"
+                 encoding="${javac.encoding}"
+                 source="${javac.source}"
+                 windowtitle="${product.fullname}"
+                 docencoding="${javac.encoding}"
+                 charset="${javac.encoding}">
+            <doctitle>${product.fullname}</doctitle>
+            <classpath refid="main.classpath" />
+            <fileset dir="${main.src.dir}" />
+        </javadoc>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- jarファイルの作成 -->
+    <!-- ========================================================== -->
+    <target name="jar" depends="compile"
+        description="--> ">
+
+        <mkdir dir="${target.dir}" />
+        <jar jarfile="${target.dir}/${ivy.module}-${version}.jar" basedir="${main.classes.dir}">
+            <manifest>
+                <attribute name="Build-by" value="${product.basename}" />
+                <attribute name="Version" value="${product.version}" />
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- パッケージ作成 -->
+    <!-- ========================================================== -->
+    <target name="package" depends="init-ivy"
+        description="--> ">
+
+    </target>
+
+    <target name="package-src" depends="init-ivy"
+        description="--> ">
+
+    </target>
+
+    <target name="package-doc" depends="init-ivy"
+        description="--> ">
+
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- パッケージ配布 -->
+    <!-- ========================================================== -->
+    <target name="publish" depends="package, package-src, package-doc"
+        description="--> ">
+
+        <echo>
+======================================================================
+organisation : ${ivy.organisation}
+module       : ${ivy.module}
+revision     : ${ivy.revision}
+======================================================================
+        </echo>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- JavaNCSSの実行 -->
+    <!-- ========================================================== -->
+    <condition property="can.javancss">
+        <and>
+            <available file="${javancss.home.dir}" type="dir" />
+            <available file="${main.src.dir}" type="dir" />
+        </and>
+    </condition>
+    <target name="count" depends="init" if="can.javancss"
+        description="--> ">
+
+        <taskdef name="javancss" classname="javancss.JavancssAntTask">
+            <classpath>
+                <fileset dir="${javancss.home.dir}/lib" includes="*.jar" />
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.javancss.dir}" />
+        <javancss srcdir="${main.src.dir}"
+                  includes="**/*.java"
+                  abortOnFail="false"
+                  generateReport="true"
+                  outputfile="${report.javancss.dir}/javancss_metrics.xml"
+                  format="xml" />
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- CPDの実行 -->
+    <!-- ========================================================== -->
+    <condition property="can.cpd">
+        <and>
+            <available file="${cpd.home.dir}" type="dir" />
+            <available file="${main.src.dir}" type="dir" />
+        </and>
+    </condition>
+    <target name="cpd" depends="init" if="can.cpd"
+        description="--> ">
+
+        <taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask">
+            <classpath>
+                <fileset dir="${cpd.home.dir}/lib" includes="*.jar" />
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.cpd.dir}" />
+        <cpd encoding="${javac.encoding}"
+             language="java"
+             minimumTokenCount="100"
+             format="xml"
+             outputfile="${report.cpd.dir}/cpd.xml">
+            <fileset dir="${main.src.dir}">
+                <include name="**/*.java" />
+            </fileset>
+        </cpd>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Checkstyleの実行 -->
+    <!-- ========================================================== -->
+    <condition property="can.checkstyle">
+        <and>
+            <available file="${checkstyle.home.dir}" type="dir" />
+            <available file="${main.src.dir}" type="dir" />
+        </and>
+    </condition>
+    <target name="checkstyle" depends="init" if="can.checkstyle"
+        description="--> ">
+
+        <taskdef resource="checkstyletask.properties">
+            <classpath>
+                <fileset dir="${checkstyle.home.dir}" includes="*.jar" />
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.checkstyle.dir}" />
+        <checkstyle config="${checkstyle.home.dir}/sun_checks.xml"
+                    failureProperty="checkstyle.failure"
+                    failOnViolation="false">
+            <formatter type="xml" tofile="${report.checkstyle.dir}/checkstyle-result.xml" />
+            <fileset dir="${main.src.dir}" includes="**/*.java" />
+        </checkstyle>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- FindBugsの実行 -->
+    <!-- ========================================================== -->
+    <condition property="can.findbugs">
+        <and>
+            <available file="${findbugs.home.dir}" type="dir" />
+            <available file="${main.src.dir}" type="dir" />
+        </and>
+    </condition>
+    <target name="findbugs" depends="compile" if="can.findbugs"
+        description="--> ">
+
+        <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask">
+            <classpath>
+                <fileset dir="${findbugs.home.dir}" includes="**/*.jar" />
+            </classpath>
+        </taskdef>
+
+        <mkdir dir="${report.findbugs.dir}" />
+        <findbugs home="${findbugs.home.dir}"
+                  output="xml"
+                  outputfile="${report.findbugs.dir}/findbugs.xml">
+            <class location="${main.classes.dir}" />
+            <auxClasspath refid="main.classpath" />
+            <sourcePath path="${main.src.dir}" />
+        </findbugs>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- カバレッジ計測 -->
+    <!-- ========================================================== -->
+    <condition property="can.jacoco">
+        <and>
+            <available file="${jacoco.home.dir}" type="dir" />
+            <available file="${test.src.dir}" type="dir" />
+        </and>
+    </condition>
+    <target name="cover" depends="test-compile" if="can.jacoco"
+        description="--> ">
+
+        <taskdef resource="org/jacoco/ant/antlib.xml" uri="antlib:org.jacoco.ant">
+            <classpath path="${jacoco.home.dir}/lib/jacocoant.jar" />
+        </taskdef>
+
+        <mkdir dir="${report.junit.dir}" />
+        <jacoco:coverage destfile="${jacoco.exec.file}">
+            <junit fork="yes" printsummary="yes" haltonfailure="no">
+                <classpath>
+                    <pathelement location="${main.classes.dir}" />
+                    <pathelement location="${test.classes.dir}" />
+                    <path refid="test.classpath" />
+                </classpath>
+                <formatter type="xml" />
+                <batchtest fork="yes" todir="${report.junit.dir}">
+                    <fileset dir="${test.classes.dir}">
+                        <include name="**/*Test.class" />
+                    </fileset>
+                </batchtest>
+            </junit>
+        </jacoco:coverage>
+
+        <mkdir dir="${report.jacoco.dir}" />
+        <jacoco:report>
+            <executiondata>
+                <file file="${jacoco.exec.file}" />
+            </executiondata>
+
+            <structure name="${ivy.module}-${version}">
+                <classfiles>
+                    <fileset dir="${main.classes.dir}" />
+                </classfiles>
+                <sourcefiles encoding="${javac.encoding}">
+                    <fileset dir="${main.src.dir}" />
+                </sourcefiles>
+            </structure>
+
+            <html destdir="${report.jacoco.dir}/html" />
+            <xml destfile="${report.jacoco.dir}/jacoco.xml" />
+        </jacoco:report>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- 成果物の消去 -->
+    <!-- ========================================================== -->
+    <target name="clean"
+        description="--> ">
+
+        <delete dir="${target.dir}" />
+    </target>
+
+</project>
+<!-- vim: set ts=4 sw=4 et: -->

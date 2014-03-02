@@ -25,8 +25,8 @@
     </publications>
 
     <dependencies>
-         <dependency name="app-data" rev="latest.integration" />
-         <dependency org="junit" name="junit" rev="4.11" conf="test->runtime(*),master(*)" />
-    <dependencies>
+        <dependency name="app-data" rev="latest.integration" />
+        <dependency org="junit" name="junit" rev="4.11" conf="test->runtime(*),master(*)" />
+    </dependencies>
 </ivy-module>
 <!-- vim: set ts=4 sw=4 et: -->

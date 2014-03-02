@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="build-custom" default="build">
+    <target name="download"
+        description="--> ">
+
+        <ivy:install organisation="apache" module="commons-lang" revision="2.0"
+                     from="publi" to="shared" transitive="true" />
+    </target>
+</project>
+<!-- vim: set ts=4 sw=4 et: -->

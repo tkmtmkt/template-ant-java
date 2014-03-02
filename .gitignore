@@ -1,1 +1,4 @@
+tool/
 target/
+repository/
+.ant-targets-build.xml
