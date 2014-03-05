@@ -12,8 +12,11 @@
     <property file="${common.dir}/common.properties" />
 
     <!-- 複数ターゲット設定 -->
-    <target name="build" depends="clean,test,jar" />
-    <target name="inspect" depends="count,cpd,checkstyle,findbugs,cover" />
+    <target name="build" depends="test,jar"
+        description="--> " />
+
+    <target name="inspect" depends="count,cpd,checkstyle,findbugs,cover"
+        description="--> " />
 
     <!-- ========================================================== -->
     <!-- 初期設定 -->
@@ -32,6 +35,7 @@
         <property name="package.base" value="${target.dir}/${ivy.module}" />
     </target>
 
+    <!-- 新バージョン番号生成（ビルド番号カウントアップ） -->
     <target name="ivy-new-version" depends="init-ivy" unless="ivy.new.revision">
         <!-- default module version prefix value -->
         <property name="module.version.prefix" value="${ivy.revision}-dev-b" />
@@ -44,6 +48,7 @@
                          revSep=""/>
     </target>
 
+    <!-- ローカルバージョン番号生成（タイムスタンプ） -->
     <target name="local-version" depends="init-ivy">
         <tstamp>
             <format property="now" pattern="yyyyMMddHHmmss"/>
@@ -51,6 +56,7 @@
         <property name="ivy.new.revision" value="${ivy.revision}-local-${now}"/>
     </target>
 
+    <!-- versionプロパティ設定 -->
     <target name="version" depends="ivy-new-version">
         <!--
         create version file in classpath for later inclusion in jar 
@@ -63,34 +69,37 @@
     </target>
 
     <!-- ========================================================== -->
-    <!-- 依存モジュール確認 -->
+    <!-- 依存モジュール解決 -->
     <!-- ========================================================== -->
     <target name="resolve" depends="init-ivy"
         description="--> ">
 
-        <ivy:resolve file="${ivy.file}" conf="default,compile,test" />
+        <!-- ivyキャッシュ更新 -->
+        <ivy:resolve file="${ivy.file}" conf="default,compile,runtime,test" />
 
-        <!-- ライブラリ参照（コンパイル用） -->
-        <ivy:cachepath pathid="main.classpath.tmp" conf="compile" />
+        <!-- クラスパス設定（コンパイル用） -->
+        <ivy:cachepath pathid="main.cachepath" conf="compile" />
         <path id="main.classpath">
+            <path refid="main.cachepath" />
             <fileset dir="${lib.unmanaged.dir}" includes="**/*.jar" />
-            <path refid="main.classpath.tmp" />
         </path>
 
-        <!-- ライブラリ参照（テスト用） -->
-        <ivy:cachepath pathid="test.classpath.tmp" conf="test" />
+        <!-- クラスパス設定（テスト用） -->
+        <ivy:cachepath pathid="test.cachepath" conf="test" />
         <path id="test.classpath">
+            <path refid="test.cachepath" />
             <fileset dir="${lib.unmanaged.dir}" includes="**/*.jar" />
-            <path refid="test.classpath.tmp" />
         </path>
     </target>
 
+    <!-- ivyキャッシュ消去 -->
     <target name="clean-cache" depends="init-ivy"
-        description="--> ">
+        description="--> ivyキャッシュの内容を消去します。">
 
         <ivy:cleancache />
     </target>
 
+    <!-- 依存関係レポート作成 -->
     <target name="depends" depends="init, resolve"
         description="--> ">
 
@@ -101,32 +110,32 @@
     <!-- 依存モジュール取得 -->
     <!-- ========================================================== -->
     <target name="retrieve" depends="init-ivy"
-        description="--> ">
+        description="--> 依存モジュールを取得します。（lib_managedに格納）">
 
-        <ivy:retrieve pattern="${lib.managed.dir}/[artifact]-[revision].[ext]" />
+        <ivy:retrieve pattern="${lib.managed.dir}/[artifact]-[revision].[ext]"
+                      sync="true"
+                      type="jar,bundle" />
     </target>
 
-    <!-- ========================================================== -->
     <!-- 依存モジュール消去 -->
-    <!-- ========================================================== -->
     <target name="clean-lib"
-        description="--> ">
+        description="--> 取得した依存モジュールを消去します。（lib_managedを削除）">
 
-        <delete dir="${lib.managed.dir}" />
+        <delete includeemptydirs="true" dir="${lib.managed.dir}" />
     </target>
 
     <!-- ========================================================== -->
     <!-- ソースコードのコンパイル -->
     <!-- ========================================================== -->
-    <available property="has.main.resources" file="${main.resources.dir}" type="dir" />
-    <target name="prepare-resources" depends="init" if="has.main.resources">
+    <available property="have.main.resources" file="${main.resources.dir}" type="dir" />
+    <target name="prepare-resources" depends="init" if="have.main.resources">
         <copy todir="${main.classes.dir}">
             <fileset dir="${main.resources.dir}" />
         </copy>
     </target>
 
-    <available property="has.main.src" file="${main.src.dir}" type="dir" />
-    <target name="compile" depends="init, resolve, prepare-resources" if="has.main.src"
+    <available property="have.main.src" file="${main.src.dir}" type="dir" />
+    <target name="compile" depends="init, resolve, prepare-resources" if="have.main.src"
         description="--> ">
 
         <mkdir dir="${main.classes.dir}" />
@@ -145,20 +154,23 @@
                 <path refid="main.classpath" />
             </classpath>
         </javac>
+        <copy todir="${main.classes.dir}">
+            <fileset dir="${main.src.dir}" excludes="**/*.java" />
+        </copy>
     </target>
 
     <!-- ========================================================== -->
     <!-- テストコードのコンパイル -->
     <!-- ========================================================== -->
-    <available property="has.test.resources" file="${test.resources.dir}" type="dir" />
-    <target name="prepare-test-resources" depends="init" if="has.test.resources">
+    <available property="have.test.resources" file="${test.resources.dir}" type="dir" />
+    <target name="prepare-test-resources" depends="init" if="have.test.resources">
         <copy todir="${test.classes.dir}">
             <fileset dir="${test.resources.dir}" />
         </copy>
     </target>
 
-    <available property="has.test.src" file="${test.src.dir}" type="dir" />
-    <target name="test-compile" depends="compile, prepare-test-resources" if="has.test.src"
+    <available property="have.test.src" file="${test.src.dir}" type="dir" />
+    <target name="test-compile" depends="compile, prepare-test-resources" if="have.test.src"
         description="--> ">
 
         <mkdir dir="${test.classes.dir}" />
@@ -178,12 +190,15 @@
                 <path refid="test.classpath" />
             </classpath>
         </javac>
+        <copy todir="${test.classes.dir}">
+            <fileset dir="${test.src.dir}" excludes="**/*.java" />
+        </copy>
     </target>
 
     <!-- ========================================================== -->
     <!-- テスト実行 -->
     <!-- ========================================================== -->
-    <target name="test" depends="test-compile" if="report.junit.dir"
+    <target name="test" depends="test-compile" if="have.test.src"
         description="--> ">
 
         <mkdir dir="${report.junit.dir}" />
@@ -194,8 +209,12 @@
                 <path refid="test.classpath" />
             </classpath>
             <formatter type="xml" />
+            <formatter type="plain" />
             <batchtest fork="yes" todir="${report.junit.dir}">
-                <fileset dir="${test.classes.dir}" includes="**/*Test.class" />
+                <fileset dir="${test.classes.dir}">
+                    <include name="**/*Test.class" />
+                    <exclude name="**/AllTests.class" />
+                </fileset>
             </batchtest>
         </junit>
     </target>
@@ -239,7 +258,7 @@
     <!-- パッケージ作成 -->
     <!-- ========================================================== -->
     <!-- パッケージ作成 -->
-    <target name="package-bin" depends="jar" if="has.main.src"
+    <target name="package-bin" depends="jar" if="have.main.src"
         description="--> ">
 
         <copy file="${package.base}-${version}.jar"
@@ -247,7 +266,7 @@
     </target>
 
     <!-- パッケージ作成 -->
-    <target name="package-src" depends="init, version" if="has.main.src"
+    <target name="package-src" depends="init, version" if="have.main.src"
         description="--> ">
 
         <hostinfo prefix="host" />
@@ -266,7 +285,7 @@
     </target>
 
     <!-- パッケージ作成 -->
-    <target name="package-doc" depends="javadoc" if="has.main.src"
+    <target name="package-doc" depends="javadoc" if="have.main.src"
         description="--> ">
 
         <hostinfo prefix="host" />
@@ -296,6 +315,7 @@
             pubrevision="${version}"
             conf="jar,src,doc"
             status="release" />
+        <delete dir="${ivy.local.default.root}/${ivy.organisation}/${ivy.module}" />
         <echo>
 ======================================================================
 organisation : ${ivy.organisation}
@@ -322,6 +342,21 @@ module       : ${ivy.module}
 revision     : ${version}
 ======================================================================
         </echo>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- 成果物の消去 -->
+    <!-- ========================================================== -->
+    <target name="clean"
+        description="--> ">
+
+        <delete dir="${target.dir}" />
+    </target>
+
+    <target name="clean-local" depends="init-ivy"
+        description="--> ">
+
+        <delete dir="${ivy.local.default.root}/${ivy.organisation}/${ivy.module}" />
     </target>
 
     <!-- ========================================================== -->
@@ -460,7 +495,10 @@ revision     : ${version}
                 </classpath>
                 <formatter type="xml" />
                 <batchtest fork="yes" todir="${report.junit.dir}">
-                    <fileset dir="${test.classes.dir}" includes="**/*Test.class" />
+                    <fileset dir="${test.classes.dir}">
+                        <include name="**/*Test.class" />
+                        <exclude name="**/AllTests.class" />
+                    </fileset>
                 </batchtest>
             </junit>
         </jacoco:coverage>
@@ -483,15 +521,6 @@ revision     : ${version}
             <html destdir="${report.jacoco.dir}/html" />
             <xml destfile="${report.jacoco.dir}/jacoco.xml" />
         </jacoco:report>
-    </target>
-
-    <!-- ========================================================== -->
-    <!-- 成果物の消去 -->
-    <!-- ========================================================== -->
-    <target name="clean"
-        description="--> ">
-
-        <delete dir="${target.dir}" />
     </target>
 
 </project>

@@ -2,11 +2,6 @@
 <project name="build-custom" default="build"
     xmlns:ivy="antlib:org.apache.ivy.ant">
 
-    <target name="package" depends="package-bin, package-doc, package-src"
-        description="--> ">
-
-    </target>
-
     <target name="package" depends="init-ivy"
         description="--> ">
 
@@ -16,9 +11,6 @@
         description="--> ">
 
     </target>
-
-
-
 
     <!-- ========================================================== -->
     <!-- 一括実行タスク -->
