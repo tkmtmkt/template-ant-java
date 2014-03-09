@@ -143,12 +143,12 @@
         </copy>
     </target>
 
-    <available property="have.main.src" file="${main.src.dir}" type="dir" />
+    <available property="have.main.src" file="${main.java.dir}" type="dir" />
     <target name="compile" depends="resolve, prepare-resources" if="have.main.src"
         description="--> プロダクトコードをコンパイルします。">
 
         <mkdir dir="${main.classes.dir}" />
-        <javac srcdir="${main.src.dir}"
+        <javac srcdir="${main.java.dir}"
                destdir="${main.classes.dir}"
                includes="**/*.java"
                encoding="${javac.encoding}"
@@ -164,7 +164,7 @@
             </classpath>
         </javac>
         <copy todir="${main.classes.dir}">
-            <fileset dir="${main.src.dir}" excludes="**/*.java" />
+            <fileset dir="${main.java.dir}" excludes="**/*.java" />
         </copy>
     </target>
 
@@ -178,12 +178,12 @@
         </copy>
     </target>
 
-    <available property="have.test.src" file="${test.src.dir}" type="dir" />
+    <available property="have.test.src" file="${test.java.dir}" type="dir" />
     <target name="test-compile" depends="compile, prepare-test-resources" if="have.test.src"
         description="--> テストコードをコンパイルします。">
 
         <mkdir dir="${test.classes.dir}" />
-        <javac srcdir="${test.src.dir}"
+        <javac srcdir="${test.java.dir}"
                destdir="${test.classes.dir}"
                includes="**/*.java"
                encoding="${javac.encoding}"
@@ -200,7 +200,7 @@
             </classpath>
         </javac>
         <copy todir="${test.classes.dir}">
-            <fileset dir="${test.src.dir}" excludes="**/*.java" />
+            <fileset dir="${test.java.dir}" excludes="**/*.java" />
         </copy>
     </target>
 
@@ -231,7 +231,7 @@
     <!-- ========================================================== -->
     <!-- jarファイルの作成 -->
     <!-- ========================================================== -->
-    <target name="jar" depends="version, compile" if="have.test.src"
+    <target name="jar" depends="version, compile" if="have.main.src"
         description="--> クラスファイルのjarファイルを作成します。">
 
         <hostinfo prefix="host" />
@@ -249,7 +249,7 @@
     <!-- ========================================================== -->
 
     <!-- Javadocドキュメント作成 -->
-    <target name="javadoc" depends="version, init" if="have.test.src"
+    <target name="javadoc" depends="version, init" if="have.main.src"
         description="--> javadocドキュメントを作成します。">
 
         <mkdir dir="${javadoc.dir}" />
@@ -261,7 +261,7 @@
                  charset="${javac.encoding}">
             <doctitle>${product.fullname}</doctitle>
             <classpath refid="main.classpath" />
-            <fileset dir="${main.src.dir}" />
+            <fileset dir="${main.java.dir}" />
         </javadoc>
     </target>
 
@@ -275,7 +275,7 @@
     <!-- ========================================================== -->
     <!-- 配布用パッケージ作成 -->
     <!-- ========================================================== -->
-    <target name="package" depends="package-bin, package-src, package-doc" if="have.test.src"
+    <target name="package" depends="package-bin, package-src, package-doc" if="have.main.src"
         description="--> 配布用パッケージを作成します。">
     </target>
 
@@ -323,7 +323,6 @@
         <ivy:publish artifactspattern="${package.base}-${version}-[type].[ext]"
             resolver="shared"
             pubrevision="${version}"
-            conf="jar,src,doc"
             status="release" />
         <delete dir="${ivy.local.default.root}/${ivy.organisation}/${ivy.module}" />
         <echo>
@@ -346,7 +345,6 @@ revision     : ${version}
             pubrevision="${version}"
             pubdate="${now}"
             forcedeliver="true"
-            conf="jar"
             status="integration" />
         <echo>
 ======================================================================
@@ -369,7 +367,7 @@ revision     : ${version}
     <condition property="can.javancss">
         <and>
             <available file="${javancss.home.dir}" type="dir" />
-            <available file="${main.src.dir}" type="dir" />
+            <available file="${main.java.dir}" type="dir" />
         </and>
     </condition>
     <target name="count" depends="init" if="can.javancss"
@@ -382,7 +380,7 @@ revision     : ${version}
         </taskdef>
 
         <mkdir dir="${report.javancss.dir}" />
-        <javancss srcdir="${main.src.dir}"
+        <javancss srcdir="${main.java.dir}"
                   includes="**/*.java"
                   abortOnFail="false"
                   generateReport="true"
@@ -396,7 +394,7 @@ revision     : ${version}
     <condition property="can.cpd">
         <and>
             <available file="${cpd.home.dir}" type="dir" />
-            <available file="${main.src.dir}" type="dir" />
+            <available file="${main.java.dir}" type="dir" />
         </and>
     </condition>
     <target name="cpd" depends="init" if="can.cpd"
@@ -414,7 +412,7 @@ revision     : ${version}
              minimumTokenCount="100"
              format="xml"
              outputfile="${report.cpd.dir}/cpd.xml">
-            <fileset dir="${main.src.dir}" includeds="**/*.java" />
+            <fileset dir="${main.java.dir}" includeds="**/*.java" />
         </cpd>
     </target>
 
@@ -424,7 +422,7 @@ revision     : ${version}
     <condition property="can.checkstyle">
         <and>
             <available file="${checkstyle.home.dir}" type="dir" />
-            <available file="${main.src.dir}" type="dir" />
+            <available file="${main.java.dir}" type="dir" />
         </and>
     </condition>
     <target name="checkstyle" depends="init" if="can.checkstyle"
@@ -441,7 +439,7 @@ revision     : ${version}
                     failureProperty="checkstyle.failure"
                     failOnViolation="false">
             <formatter type="xml" tofile="${report.checkstyle.dir}/checkstyle-result.xml" />
-            <fileset dir="${main.src.dir}" includes="**/*.java" />
+            <fileset dir="${main.java.dir}" includes="**/*.java" />
         </checkstyle>
     </target>
 
@@ -451,7 +449,7 @@ revision     : ${version}
     <condition property="can.findbugs">
         <and>
             <available file="${findbugs.home.dir}" type="dir" />
-            <available file="${main.src.dir}" type="dir" />
+            <available file="${main.java.dir}" type="dir" />
         </and>
     </condition>
     <target name="findbugs" depends="compile" if="can.findbugs"
@@ -469,7 +467,7 @@ revision     : ${version}
                   outputfile="${report.findbugs.dir}/findbugs.xml">
             <class location="${main.classes.dir}" />
             <auxClasspath refid="main.classpath" />
-            <sourcePath path="${main.src.dir}" />
+            <sourcePath path="${main.java.dir}" />
         </findbugs>
     </target>
 
@@ -479,7 +477,7 @@ revision     : ${version}
     <condition property="can.jacoco">
         <and>
             <available file="${jacoco.home.dir}" type="dir" />
-            <available file="${test.src.dir}" type="dir" />
+            <available file="${test.java.dir}" type="dir" />
         </and>
     </condition>
     <target name="cover" depends="test-compile" if="can.jacoco"
@@ -521,7 +519,7 @@ revision     : ${version}
                     <fileset dir="${main.classes.dir}" />
                 </classfiles>
                 <sourcefiles encoding="${javac.encoding}">
-                    <fileset dir="${main.src.dir}" />
+                    <fileset dir="${main.java.dir}" />
                 </sourcefiles>
             </structure>
 
