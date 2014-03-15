@@ -1,5 +1,14 @@
 repository/
 tool/
-target/
 out/
+*.class
+*.jar
+
+# ant+ivy
+target/
 .ant-targets-build.xml
+
+# eclipse
+.metadata/
+RemoteSystemsTempFiles/
+bin/

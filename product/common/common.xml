@@ -418,7 +418,7 @@ revision     : ${version}
              minimumTokenCount="100"
              format="xml"
              outputfile="${report.cpd.dir}/cpd.xml">
-            <fileset dir="${main.src.dir}" includeds="**/*.java" />
+            <fileset dir="${main.src.dir}" includes="**/*.java" />
         </cpd>
     </target>
 
